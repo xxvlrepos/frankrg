@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+  </head>
+  <body>
+    <h1>File manager</h1>
+    <form
+      enctype="multipart/form-data"
+      action="http://localhost:8080/upload"
+      method="post"
+    >
+      <input type="file" id="file" name="file" />
+      <input type="submit" value="upload" />
+    </form>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Size</th>
+          <th>Mode</th>
+          <th>Modified</th>
+          <th>
+            <input type="button" value="mkdir" onclick="createFolder()" />
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range .}}
+        <tr>
+          <td><a href="{{if .IsDir}}/{{end}}{{.Name}}">{{.Name}}</a></td>
+          <td>{{if .IsDir}}-{{else}}{{.Size}}{{end}}</td>
+          <td>{{.Mode}}</td>
+          <td>{{.ModTime}}</td>
+          <td>
+            <button onclick="downloadFile('{{.Name}}')">download</button>
+          </td>
+          <td><button onclick="deleteFile('{{.Name}}')">delete</button></td>
+          <td><button onclick="renameFile('{{.Name}}')">rename</button></td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+
+    <script>
+      function currentLocation(fileName) {
+        var currentPath = `.${window.location.pathname}/`;
+        return currentPath + fileName;
+      }
+
+      function createFolder() {
+        let dirName = prompt("enter dir name:");
+        dirName = currentLocation(dirName);
+        if (dirName) {
+          fetch("http://localhost:8080/mkdir", {
+            method: "PUT",
+            body: new URLSearchParams({ dirName }),
+          })
+            .then(function (response) {
+              if (response.ok) {
+                alert("directory successfully created");
+                location.reload();
+              } else {
+                alert("failed to create folder");
+              }
+            })
+            .catch(function (error) {
+              console.log(error);
+              alert("err");
+            });
+        }
+      }
+
+      function downloadFile(fileName) {
+        window.open(
+          "http://localhost:8080/download?path=" + currentLocation(fileName)
+        );
+      }
+
+      function deleteFile(fileName) {
+        if (confirm("are you sure about deletion " + fileName + "?")) {
+          fetch(
+            `http://localhost:8080/delete?file=${currentLocation(fileName)}`,
+            {
+              method: "DELETE",
+            }
+          )
+            .then(function (response) {
+              if (response.ok) {
+                alert("file successfully deleted");
+                location.reload();
+              } else {
+                alert("failed to delete file");
+              }
+            })
+            .catch(function (error) {
+              console.log(error);
+              alert("err");
+            });
+        }
+      }
+
+      function renameFile(fileName) {
+        let newFileName = prompt("enter new name:");
+        if (newFileName) {
+          fetch(
+            `http://localhost:8080/rename?old=${currentLocation(
+              fileName
+            )}&new=${currentLocation(newFileName)}`,
+            {
+              method: "PATCH",
+            }
+          )
+            .then(function (response) {
+              if (response.ok) {
+                alert("Файл успешно переименован");
+                location.reload();
+              } else {
+                alert("Не удалось переименовать файл");
+              }
+            })
+            .catch(function (error) {
+              console.log(error);
+              alert("Произошла ошибка");
+            });
+        }
+      }
+    </script>
+  </body>
+</html>
